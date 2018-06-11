@@ -14,14 +14,14 @@ Return SubStr(H,P:=(((Z:=StrLen(ES))+(X:=StrLen(H))+StrLen(BS)-Z-X)?((T:=InStr(H
 }
 ;===========================================================================================
 
-;FileSelectFolder, FolderPath
+;FileSelectFolder, FolderPath, C:\temp\AutoHotKeyScripts\XML_DataSetParser\Studies\TEST
 ;FileSelectFolder, FolderPath, \\ANHB-SLP-DATA\NASSHARE\2017 Grad Dip Students\Nov29_ScoringSession
-FileSelectFolder, FolderPath, J:\Pulmonary Physiology\SleepScience\SCG\Labs\
+FileSelectFolder, FolderPath, J:\Pulmonary Physiology\SleepScience\SCG\Labs\Q Sleep\2018 QSleep
 	
 outputFile := % FolderPath . "\" . A_Now . "ScoringComparison.xlsx"
-outputText := % FolderPath . "\" . A_Now . "TextCheck.csv"
+;outputText := % FolderPath . "\" . A_Now . "TextCheck.csv"
 
-FileAppend, Scorer`#Event`#Time`#Duration`n, %outputText%
+;FileAppend, Scorer`#Event`#Time`#Duration`n, %outputText%
 
 ;MsgBox, %FileList%
 
@@ -53,62 +53,21 @@ objExcel.Worksheets(1).Range("S1").Value := "Hyp index"
 objExcel.Worksheets(1).Range("T1").Value := "RERA index"
 objExcel.Worksheets(1).Range("U1").Value := "Arousal index"
 objExcel.Worksheets(1).Range("V1").Value := "Limb index"
+objExcel.Worksheets(1).Range("W1").Value := "Num OA"
+objExcel.Worksheets(1).Range("X1").Value := "Num CA"
+objExcel.Worksheets(1).Range("Y1").Value := "Num MA"
+objExcel.Worksheets(1).Range("Z1").Value := "Num Hyp"
 
-ScoredEventNames := Object()
-ScoredEventStartTimes := Object()
-ScoredEventEpochs := Object()
-ScoredEventDurations := Object()
-ScoredEventDesats := Object()
-ScoredEventDesatMins := Object()
-ScoredEventDesatOffsets := Object() ;offset is the time from the end of the associated respiratory event to the termination of the marked SpO2 desat event
-SleepStages := Object()
-ScoredEventSleepStage := Object()
-HypopArr := {stage:[5],duration:[],desat:[100]}
-OAArr := {stage:[5],duration:[],desat:[100]}
-CAArr := {stage:[5],duration:[],desat:[100]}
-MAArr := {stage:[5],duration:[],desat:[100]}
-RERAArr := {stage:[5],duration:[],desat:[100]}
-LimbArr := {stage:[5],duration:[],desat:[100]}
-ArousalArr := {stage:[5],type:[5]}
-
-ClearArray(Name, Size)
-	{
-	Loop, % Size
-	%Name%%A_Index% :=
-	Return
-	}
 	
 loop Files, %FolderPath%\*.xml
 {
 	k := % A_Index + 1
 
-	
-	ScoredEventNames := Object()
-	ScoredEventStartTimes := Object()
-	ScoredEventEpochs := Object()
-	ScoredEventDurations := Object()
-	ScoredEventDesats := Object()
-	ScoredEventDesatMins := Object()
-	ScoredEventDesatOffsets := Object() ;offset is the time from the end of the associated respiratory event to the termination of the marked SpO2 desat event
-	SleepStages := Object()
-	ScoredEventSleepStage := Object()
-
-	ClearArray("ScoredEventNames", Array0)
-	ClearArray("ScoredEventStartTimes", Array0)
-	ClearArray("ScoredEventEpochs", Array0)
-	ClearArray("ScoredEventDurations", Array0)
-	ClearArray("ScoredEventStartTimes", Array0)
-	ClearArray("ScoredEventDesats", Array0)
-	ClearArray("ScoredEventDesatMins", Array0)
-	ClearArray("SleepStages", Array0)
-	ClearArray("ScoredEventSleepStage", Array0)
-	ClearArray("HypopArr", Array0)
-	ClearArray("OAArr", Array0)
-	ClearArray("CAArr", Array0)
-	ClearArray("MAArr", Array0)
-	ClearArray("RERAArr", Array0)
-	ClearArray("LimbArr", Array0)
-	ClearArray("ArousalArr", Array0)
+	;eventArr[] holds values [evName,evStartTime,evEpoch,evDuration,evDesat,evDesatMin,evDesatOffset]
+	eventArr := []
+	;sleepArr[] holds value [sleepStage], index is the epoch number
+	sleepArr := []
+	countArr := []
 
 	countLOn := 0
 	countWake := 0
@@ -141,6 +100,47 @@ loop Files, %FolderPath%\*.xml
 	;FileRead, xml, %inputFile%
 	FileRead, xml, %FolderPath%\%A_LoopFileName%
 
+	;Initialise arrays for each region and sleep stage
+
+	Loop, 138
+	{
+		i := A_Index
+		If i = 1
+		{
+			loopSleepStage = 1
+		}
+		Else If i = 2
+		{
+			loopSleepStage = 2
+		}
+		Else If i = 3
+		{
+			loopSleepStage = 3
+		}
+		Else If i = 5
+		{
+			loopSleepStage = 5
+		}
+		Else If i = 10
+		{
+			loopSleepStage = 10
+		}
+		Else If i = 138
+		{
+			loopSleepStage = 138
+		}
+		Else
+			Continue
+		countArr[1,loopSleepStage] := 0
+		countArr[2,loopSleepStage] := 0
+		countArr[3,loopSleepStage] := 0
+		countArr[4,loopSleepStage] := 0
+		countArr[5,loopSleepStage] := 0
+		countArr[6,loopSleepStage] := 0
+		countArr[7,loopSleepStage] := 0
+	}
+	
+	
 	CreatedOn := StrX( xml, "<CREATEDON>",1,11,"</CREATEDON>",1,12)
 	LastModifiedBy := StrX( xml, "<LASTMODIFIEDBY>",1,16,"</LASTMODIFIEDBY>",1,17)
 	LastModifiedOn := StrX( xml, "<LASTMODIFIEDON>",1,16,"</LASTMODIFIEDON>",1,17)
@@ -150,11 +150,11 @@ loop Files, %FolderPath%\*.xml
 
 	If (strCommentsLength > 8)
 		{
-		InputBox, DataSetID, Enter ID, Score Data Set ID for %A_LoopFileName% is %strComments%. Please enter a valid ID.
+		InputBox, DataSetID, Enter ID, Score Data Set ID for %A_LoopFileName% is empty. Please enter a valid ID.
 		strComments := % DataSetID
 		}	
 
-	Gui, Add, Progress, w500 Range0-5000 vMyProgress
+	Gui, Add, Progress, w500 Range0-8000 vMyProgress
 	Gui, Add, Text, vEventIndex wp
 	Gui, Add, Text, vEventTime wp
 	Gui, Show, x100 y100
@@ -163,22 +163,22 @@ loop Files, %FolderPath%\*.xml
 	While Item := StrX( xml, "<SCOREDEVENT>",N,0,"</SCOREDEVENT>",1,0, N)
 		{
 		i = % A_Index
-		ScoredEventName := StrX( Item, "<NAME>",1,6,"</NAME>",1,7)
-		ScoredEventNames.Insert(StrX( Item, "<NAME>",1,6,"</NAME>",1,7))
-		ScoredEventStartTime := StrX( Item, "<TIME>",1,6,"</TIME>",1,7)
-		ScoredEventStartTimes.Insert(ScoredEventStartTime)
-		ScoredEventEpochs.Insert(Floor(1 + ScoredEventStartTime/30))
-		ScoredEventDuration := StrX( Item, "<DURATION>",1,10,"</DURATION>",1,11)
-		ScoredEventDurations.Insert(StrX( Item, "<DURATION>",1,10,"</DURATION>",1,11))
-		ScoredEventDesats.Insert(StrX( Item, "<PARAM1>",1,8,"</PARAM1>",1,9))
-		ScoredEventDesatMins.Insert(StrX( Item, "<PARAM2>",1,8,"</PARAM2>",1,9))
-		ScoredEventDesatOffsets.Insert(StrX( Item, "<PARAM3>",1,8,"</PARAM3>",1,9))
+		
+		scoredEventName := StrX( Item, "<NAME>",1,6,"</NAME>",1,7)
+		scoredEventStartTime := StrX( Item, "<TIME>",1,6,"</TIME>",1,7)
+		scoredEventEpoch := Floor(1 + ScoredEventStartTime/30)
+		scoredEventDuration := StrX( Item, "<DURATION>",1,10,"</DURATION>",1,11)
+		scoredEventDesat := StrX( Item, "<PARAM1>",1,8,"</PARAM1>",1,9)
+		scoredEventDesatMin .= StrX( Item, "<PARAM2>",1,8,"</PARAM2>",1,9)
+		scoredEventDesatOffset .= StrX( Item, "<PARAM3>",1,8,"</PARAM3>",1,9)
+		
+		eventArr.Insert([scoredEventName,scoredEventStartTime,scoredEventEpoch,scoredEventDuration,scoredEventDesat,scoredEventDesatMin,scoredEventDesatOffset])
 		
 		GuiControl,, MyProgress, %i%
 		GuiControl,, EventIndex, Now processing event %i%
-		GuiControl,, EventTime, Scored event time is %ScoredEventStartTime%
+		GuiControl,, EventTime, Scored event epoch is %scoredEventEpoch%
 		
-		FileAppend, %strComments%`#%ScoredEventName%`#%ScoredEventStartTime%`#%ScoredEventDuration%`n, %outputText%
+;		FileAppend, %strComments%`#%ScoredEventName%`#%ScoredEventStartTime%`#%ScoredEventDuration%`n, %outputText%
 
 		}
 		
@@ -190,7 +190,6 @@ loop Files, %FolderPath%\*.xml
 
 	N := 1
 	
-	;Item := StrX( xml, "<SLEEPSTAGE>",1,12,"</SLEEPSTAGE>",1,13, N )
 	sleepOnsetMarker := 0
 	REMOnsetMarker := 0
 
@@ -207,7 +206,7 @@ loop Files, %FolderPath%\*.xml
 			}
 		Else If (SleepStage = "10")
 			{
-			SleepStage = 0
+			SleepStage = 10
 			If (sleepOnsetMarker = 0)
 				countWake := % countWake + 0.5
 			Else
@@ -248,7 +247,9 @@ loop Files, %FolderPath%\*.xml
 			}
 		Else
 			countOther++
-		SleepStages.Insert(SleepStage)
+		
+		
+		sleepArr.Insert(SleepStage)
 		GuiControl,, MyProgress, %j%
 		GuiControl,, EpochNumber, Now processing sleep stage for epoch %j%
 		;Sleep Stage Codes
@@ -261,6 +262,8 @@ loop Files, %FolderPath%\*.xml
 
 		}
 
+	SetFormat, float, 0.3
+	
 	NREMTime := % countN1 + countN2 + countN3
 	totalSleepTime := % NREMTime + countREM
 	totalStudyTime := % totalSleepTime + countWake
@@ -274,6 +277,7 @@ loop Files, %FolderPath%\*.xml
 	CACountSleep := 0
 	MACount := 0
 	MACountSleep := 0
+	respEventCountSleep := 0
 	ArousalCount := 0
 	ArousalCountSleep := 0
 	RERACount := 0
@@ -282,6 +286,22 @@ loop Files, %FolderPath%\*.xml
 	PLMCountSleep := 0
 	LimbCount := 0
 	LimbCountSleep := 0
+	totalApneaSleep := 0
+	HypIndexSleep := 0
+	OAIndexSleep := 0
+	CAIndexSleep := 0
+	MAIndexSleep := 0
+	ApneaIndexSleep := 0
+	AHISleep := 0
+	ArousalIndexSleep := 0
+	RERAIndexSleep := 0
+	LimbIndexSleep := 0
+	hypopDuration := 0
+	OADuration := 0
+	CADuration := 0
+	MADuration := 0
+	RERADuration := 0
+	ArousalDuration := 0
 ;	MsgBox, 
 ;	(
 ;	Wake duration: %countWake%
@@ -297,95 +317,129 @@ loop Files, %FolderPath%\*.xml
 ;	Sleep Efficiency := %sleepEff%
 ;	)
 
-	For index, element in ScoredEventNames
-		{
-		EventEpoch := ScoredEventEpochs[index] - 1
-		EventStage := SleepStages[EventEpoch]
-		EventDuration := ScoredEventDurations[index]
-		EventDesat := ScoredEventDesats[index] ; DESAT ASSOCIATION ALGORITHM REQUIRED
-		
-		If(InStr(element,"Hypopnea"))
-			{
-			HypopCount++
-			HypopArr.Insert(element, {stage:EventStage,duration:EventDuration,desat:EventDesat})
-			If (EventStage > 0 and EventStage <= 5)
-				HypopCountSleep++
-			}
-		If(InStr(element,"Obstructive Apnea"))
-			{
-			OACount++
-			OAArr.Insert(element, {stage:EventStage,duration:EventDuration,desat:EventDesat})
-			If (EventStage > 0 and EventStage <= 5)
-				OACountSleep++
-			}
-		If(InStr(element,"Central Apnea"))
-			{
-			CACount++
-			CAArr.Insert(element, {stage:EventStage,duration:EventDuration,desat:EventDesat})
-			If (EventStage > 0 and EventStage <= 5)
-				CACountSleep++
-			}
-		If(InStr(element,"Mixed Apnea"))
-			{
-			MACount++
-			MAArr.Insert(element, {stage:EventStage,duration:EventDuration,desat:EventDesat})
-			If (EventStage > 0 and EventStage <= 5)
-				MACountSleep++
-			}
-		If(InStr(element,"Arousal"))
-			{
-			ArousalCount++
-			ArousalArr.Insert(element, {stage:EventStage,type:element})
-			If (EventStage > 0 and EventStage <= 5)
-				ArousalCountSleep++
-			}
-		If(InStr(element,"RERA"))
-			{
-			RERACount++
-			RERAArr.Insert(element, {stage:EventStage,duration:EventDuration,desat:EventDesat})
-			If (EventStage > 0 and EventStage <= 5)
-				RERACountSleep++
-			}
-		If(InStr(element,"Limb Movement"))
-			{
-			LimbCount++
-			LimbArr.Insert(element, {stage:EventStage,duration:EventDuration,desat:EventDesat})
-			If (EventStage > 0 and EventStage <= 5)
-				LimbCountSleep++
-			}
+	Gui, Destroy
 
+	for Index, Value in eventArr
+	{
+		eventName := % Value.1
+		eventTime := % Value.2
+		eventEpoch := % Value.3
+		eventDuration := % Value.4
+		eventDesat := % Value.5
+		eventDesatMin := % Value.6
+		eventDesatOffset := % Value.7
+		eventStage := sleepArr[eventEpoch]
+		
+		If(InStr(eventName,"Hypopnea"))
+		{
+			HypopCount++
+			countArr[4,eventStage] := countArr[4,eventStage] + 1
+			hypopDuration := hypopDuration + eventDuration
+			If (eventStage > 0 and eventStage <=5)
+				HypopCountSleep++
 		}
+		Else If(InStr(eventName,"Obstructive Apnea"))
+		{
+			OACount++
+			countArr[1,eventStage] := countArr[1,eventStage] + 1
+			OADuration := OADuration + eventDuration
+			If (eventStage > 0 and eventStage <=5)
+				OACountSleep++
+		}
+		Else If(InStr(eventName,"Central Apnea"))
+		{
+			OACount++
+			countArr[2,eventStage] := countArr[2,eventStage] + 1
+			CADuration := CADuration + eventDuration
+			If (eventStage > 0 and eventStage <=5)
+				CACountSleep++
+		}
+		Else If(InStr(eventName,"Mixed Apnea"))
+		{
+			MACount++
+			countArr[3,eventStage] := countArr[3,eventStage] + 1
+			MADuration := MADuration + eventDuration
+			If (eventStage > 0 and eventStage <=5)
+				MACountSleep++
+		}
+		Else If(InStr(eventName,"RERA"))
+		{
+			RERACount++
+			countArr[5,eventStage] := countArr[5,eventStage] + 1
+			RERADuration := RERADuration + eventDuration
+			If (eventStage > 0 and eventStage <=5)
+				RERACountSleep++
+		}
+		Else If(InStr(eventName,"Arousal"))
+		{
+			ArousalCount++
+			countArr[6,eventStage] := countArr[6,eventStage] + 1
+			arousalDuration := arousalDuration + eventDuration
+			If (eventStage > 0 and eventStage <=5)
+				ArousalCountSleep++
+		}
+		Else If(InStr(eventName,"Limb movement"))
+		{
+			ArousalCount++
+			countArr[7,eventStage] := countArr[7,eventStage] + 1
+			limbDuration := limbDuration + eventDuration
+			If (eventStage > 0 and eventStage <=5)
+				LimbCountSleep++
+		}
+	}
+
+	;calculate number of events
+	numOAWake := % countArr[1,10]
+	numOANREM := % countArr[1,1] + countArr[1,2] + countArr[1,3]
+	numOAREM := % countArr[1,5]
+	numOASleep := % numOANREM + numOAREM
 	
-	;Clear previous indexes
-	totalApneaSleep := 0
-	HypIndexSleep := 0
-	OAIndexSleep := 0
-	CAIndexSleep := 0
-	MAIndexSleep := 0
-	ApneaIndexSleep := 0
-	AHISleep := 0
-	ArousalIndexSleep := 0
-	RERAIndexSleep := 0
-	LimbIndexSleep := 0
+	numCAWake := % countArr[2,10]
+	numCANREM := % countArr[2,1] + countArr[2,2] + countArr[2,3]
+	numCAREM := % countArr[2,5]
+	numCASleep := % numCANREM + numCAREM
 	
-	;Calculate indexes
-	totalApneaSleep := OACountSleep + CACountSleep + MACountSleep
+	numMAWake := % countArr[3,10]
+	numMANREM := % countArr[3,1] + countArr[3,2] + countArr[3,3]
+	numMAREM := % countArr[3,5]
+	numMASleep := % numMANREM + numMAREM
 	
-	HypIndexSleep := % (HypopCountSleep / totalSleepTime) * 60
-	OAIndexSleep := % (OACountSleep / totalSleepTime) * 60
-	CAIndexSleep := % (CACountSleep / totalSleepTime) * 60
-	MAIndexSleep := % (MACountSleep / totalSleepTime) * 60
-	ApneaIndexSleep := % (totalApneaSleep / totalSleepTime) * 60
-	AHISleep := % ((totalApneaSleep + HypopCountSleep) / totalSleepTime)  * 60
-	ArousalIndexSleep := % (ArousalCountSleep / totalSleepTime) * 60
-	RERAIndexSleep := % (RERACountSleep / totalSleepTime) * 60
-	LimbIndexSleep := % (LimbCountSleep / totalSleepTime) * 60
+	numHypWake := % countArr[4,10]
+	numHypNREM := % countArr[4,1] + countArr[4,2] + countArr[4,3]
+	numHypREM := % countArr[4,5]
+	numHypSleep := % numHypNREM + numHypREM
 	
-	;Calculate sleep percentages
-	percentN1 := % (countN1 / totalSleepTime) * 100
-	percentN2 := % (countN2 / totalSleepTime) * 100
-	percentN3 := % (countN3 / totalSleepTime) * 100
-	percentREM := % (countREM / totalSleepTime) * 100
+	numRERAWake := % countArr[5,10]
+	numRERANREM := % countArr[5,1] + countArr[5,2] + countArr[5,3]
+	numRERAREM := % countArr[5,5]
+	numRERASleep := % numRERANREM + numRERAREM
+	
+	numArousalWake := % countArr[6,10]
+	numArousalNREM := % countArr[6,1] + countArr[6,2] + countArr[6,3]
+	numArousalREM := % countArr[6,5]
+	numArousalSleep := % numArousalNREM + numArousalREM
+	
+	numLimbWake := % countArr[7,10]
+	numLimbNREM := % countArr[7,1] + countArr[7,2] + countArr[7,3]
+	numLimbREM := % countArr[7,5]
+	numLimbSleep := % numLimbNREM + numLimbREM
+	
+	respEventCountSleep := %  numOASleep + numCASleep + numMASleep + numHypSleep
+	
+	;calculate index for each event type
+	OAIndexSleep := % numOASleep * 60 / totalSleepTime
+	CAIndexSleep := % numCASleep * 60 / totalSleepTime
+	MAIndexSleep := % numMASleep * 60 / totalSleepTime
+	HypIndexSleep := % numHypSleep * 60 / totalSleepTime
+	RERAIndexSleep := % numRERASleep * 60 / totalSleepTime
+	ArousalIndexSleep := % numArousalSleep * 60 / totalSleepTime
+	AHISleep := % respEventCountSleep * 60 / totalSleepTime
+	LimbIndexSleep := % numLimbSleep * 60 / totalSleepTime
+	percentN1 := countN1 * 100 / totalSleepTime
+	percentN2 := countN2 * 100 / totalSleepTime
+	percentN3 := countN3 * 100 / totalSleepTime
+	percentREM := countREM * 100 / totalSleepTime
+	
 	
 	objExcel.Worksheets(1).Range("A"k).Value := strComments
 	objExcel.Worksheets(1).Range("B"k).Value := sleepEff
@@ -409,23 +463,19 @@ loop Files, %FolderPath%\*.xml
 	objExcel.Worksheets(1).Range("T"k).Value := RERAIndexSleep
 	objExcel.Worksheets(1).Range("U"k).Value := ArousalIndexSleep
 	objExcel.Worksheets(1).Range("V"k).Value := LimbIndexSleep
-	
-	Gui, Destroy
-	ScoredEventNames := ""
-	ScoredEventStartTimes := ""
-	ScoredEventEpochs := ""
-	ScoredEventDurations := ""
-	ScoredEventDesats := ""
-	ScoredEventDesatMins := ""
-	ScoredEventDesatOffsets := "" ;offset is the time from the end of the associated respiratory event to the termination of the marked SpO2 desat event
-	SleepStages := ""
-	ScoredEventSleepStage := ""
-	}
+	objExcel.Worksheets(1).Range("W"k).Value := numOASleep
+	objExcel.Worksheets(1).Range("X"k).Value := numCASleep
+	objExcel.Worksheets(1).Range("Y"k).Value := numMASleep
+	objExcel.Worksheets(1).Range("Z"k).Value := numHypSleep
+
+}
 
 objExcel.ActiveWorkbook.Save()
 
+
 MsgBox, Data extraction complete!
-	
+
+
 objExcel.Application.Quit()
 ExitApp
 
