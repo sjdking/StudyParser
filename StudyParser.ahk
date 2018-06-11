@@ -23,8 +23,6 @@ outputFile := % FolderPath . "\" . A_Now . "ScoringComparison.xlsx"
 
 ;FileAppend, Scorer`#Event`#Time`#Duration`n, %outputText%
 
-;MsgBox, %FileList%
-
 objExcel := ComObjCreate("Excel.Application")
 objExcel.Visible := true
 newComparison := objExcel.Workbooks.Add()
