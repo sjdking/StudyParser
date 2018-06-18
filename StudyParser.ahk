@@ -16,7 +16,8 @@ Return SubStr(H,P:=(((Z:=StrLen(ES))+(X:=StrLen(H))+StrLen(BS)-Z-X)?((T:=InStr(H
 
 ;FileSelectFolder, FolderPath, C:\temp\AutoHotKeyScripts\XML_DataSetParser\Studies\TEST
 ;FileSelectFolder, FolderPath, \\ANHB-SLP-DATA\NASSHARE\2017 Grad Dip Students\Nov29_ScoringSession
-FileSelectFolder, FolderPath, J:\Pulmonary Physiology\SleepScience\SCG\Labs\Q Sleep\
+;FileSelectFolder, FolderPath, J:\Pulmonary Physiology\SleepScience\SCG\Labs\Q Sleep\
+FileSelectFolder, FolderPath
 	
 outputFile := % FolderPath . "\" . A_Now . "ScoringComparison.xlsx"
 ;outputText := % FolderPath . "\" . A_Now . "TextCheck.csv"
